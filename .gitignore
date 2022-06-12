@@ -1,0 +1,7 @@
+.ipynb_checkpoints/
+
+VIT_backbone/__pycache__/vit_transformer.cpython-39.pyc
+
+sample-1gb.txt
+
+.gitignore
