@@ -17,7 +17,7 @@ import re
 
 
 class RocoDataset():
-    def __init__(self, roco_path = "./",mode="train", transform=False, caption_max_length=64, keywords_max_length=8):
+    def __init__(self, roco_path = "./",mode="train", transform=False, caption_max_length=64, keywords_max_length=8, img_size=224):
         """
         Inicializa a classe RocoDataset.
         Inputs:
@@ -29,10 +29,12 @@ class RocoDataset():
                                                       transforms.Compose - transformacao definida pelo usuário.
             caption_max_length: int -> tamanho do contexto utilizado nas legendas das imagens. Inclui tokens especiais
             keywords_max_length: int -> tamanho do cotexto utilizado nas plavras-chaves. Vale notar que nao inclui tokens especiais porque as palavras nao estao ordenadas.
+            img_size: int -> tamanho que a imagem terá depois do Resize.
         """
 
         self.caption_max_length = caption_max_length
         self.keywords_max_length = keywords_max_length
+        self.img_size = img_size
 
         # Define os locais em que os arquivos serao puxados.
         self.imgs_path = roco_path + f"/data/{mode}/radiology/images/"
@@ -61,7 +63,7 @@ class RocoDataset():
             transform = torchvision.transforms.Compose(
                         [torchvision.transforms.ToTensor(),
                         torchvision.transforms.Normalize((0.5,0.5,0.5), (0.5, 0.5, 0.5)),
-                        torchvision.transforms.Resize(( 224, 224)),
+                        torchvision.transforms.Resize(( self.img_size, self.img_size)),
                         ])
         self.transform = transform
 
