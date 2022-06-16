@@ -1,0 +1,9 @@
+#Parameters decoder transformers
+
+depth: 2
+max_seq_length: 9
+embbeding: 64
+drop_p: 0.1
+forward_expansion: 1
+forward_drop_p: 0.1
+num_heads: 2
