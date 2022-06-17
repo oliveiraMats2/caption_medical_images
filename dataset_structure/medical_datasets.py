@@ -80,6 +80,7 @@ class RocoDataset():
             caption_input: Tensor -> legenda da imagem tokenizada.
             caption_target: Tensor -> legenda da imagem tokenizada que sofreu shift de uma unidade.
             keywords_input: Tensor -> palavras-chave tokenizadas.
+            files[idx]: str -> nome da imagem.
         """
         # Le o arquivo jpg de imagem e converte em RGB, garantindo que todos os vetores terao 3 canais, mesmo que a imagem seja apenas cinza.
         img = Image.open(self.imgs_path + self.files[idx]).convert("RGB")
@@ -113,7 +114,7 @@ class RocoDataset():
         )["input_ids"]
 
 
-        return img, caption_input[0], caption_target[0], keywords_input
+        return img, caption_input[0], caption_target[0], keywords_input, self.files[idx][:-4]
         
 
 
@@ -131,7 +132,8 @@ if __name__ == "__main__":
     # Exemplo de como utilizar o RocoDataset com um DataLoader
     from torch.utils.data import DataLoader
     roco_loader = DataLoader(dataset, batch_size = 10, shuffle=True)
-    img, caption_input, caption_target, keywords_input = next(iter(roco_loader))
+    img, caption_input, caption_target, keywords_input, img_name = next(iter(roco_loader))
+    print(img_name)
     plt.imshow(  img[0].permute(1, 2, 0)  )
     plt.show()
 
