@@ -1,6 +1,7 @@
 import torch
 import yaml
 from transformers import AutoTokenizer
+from einops import repeat
 import numpy as np
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
@@ -76,9 +77,11 @@ class MultiHeadSelfAttention(torch.nn.Module):
         """
         Modificar o codigo aqui para entrar o embbeding do modelo encoder.
         """
+        inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=self.max_seq_length)
 
         q = self.W_q(inputs)
         print(f"shape do q {q.shape}")
+
         q = q.view(batch_size, self.max_seq_length, self.num_heads, -1)
         q = q.transpose(1, 2)
 
@@ -202,14 +205,11 @@ class LanguageModel(torch.nn.Sequential):
         self.classifier = Classifier(dim, vocab_size)
 
     def forward(self, inputs, embbeding_V, embbeding_K):
-
         mask = self.mask(inputs)
 
         inputs_embbedings = self.embedder(inputs)
 
         h = inputs_embbedings
-
-        print(f"input embbedings {inputs_embbedings.shape}")
 
         output_decoder = self.transformer_decoder(inputs_embbedings, inputs_embbedings, inputs_embbedings, mask)
 
