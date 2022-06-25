@@ -9,3 +9,7 @@ transformer_decoder/sample-1gb.txt
 VIT_backbone/VIT_transformer_debug.ipynb
 
 .idea/
+
+../data/test/radiology/images/
+../data/train/radiology/images/
+../data/validation/radiology/images/

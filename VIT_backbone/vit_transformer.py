@@ -6,7 +6,7 @@ from torch import Tensor
 from einops import rearrange, reduce, repeat
 from einops.layers.torch import Rearrange, Reduce
 
-with open('config_vit.yaml', 'r') as file:
+with open('VIT_backbone/config_vit.yaml', 'r') as file:
     parameters = yaml.safe_load(file)
 
 

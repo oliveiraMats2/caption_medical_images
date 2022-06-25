@@ -17,16 +17,14 @@ from sklearn.metrics import f1_score
 import spacy
 
 
-
 def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_sensitive=False):
-
     # Hide warnings
     warnings.filterwarnings('ignore')
 
     # Stats on the captions
     min_words = sys.maxsize
     max_words = 0
-    max_sent  = 0
+    max_sent = 0
     total_words = 0
     words_distrib = {}
 
@@ -46,10 +44,10 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
     translator = str.maketrans('', '', string.punctuation)
 
     # Parse arguments
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument('candidate_file', help='path to the candidate file to evaluate')
-    #parser.add_argument('gt_file', help='path to the ground truth file')
-    #parser.add_argument('-r', '--remove-stopwords', default=False, action='store_true', help='enable stopword removal')
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('candidate_file', help='path to the candidate file to evaluate')
+    # parser.add_argument('gt_file', help='path to the ground truth file')
+    # parser.add_argument('-r', '--remove-stopwords', default=False, action='store_true', help='enable stopword removal')
     # parser.add_argument('-s', '--stemming', default=False, action='store_true', help='enable stemming')
     # parser.add_argument('-c', '--case-sensitive', default=False, action='store_true', help='case-sensitive evaluation')
     # args = parser.parse_args()
@@ -57,12 +55,12 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
     # Read files
     # print('Input parameters\n********************************')
 
-    #print('Candidate file is "' + args.candidate_file + '"')
-    #candidate_pairs = readfile(args.candidate_file)
+    # print('Candidate file is "' + args.candidate_file + '"')
+    # candidate_pairs = readfile(args.candidate_file)
     candidate_pairs = readfile(file_1)
 
-    #print('Ground Truth file is "' + args.gt_file + '"')
-    #gt_pairs = readfile(args.gt_file)
+    # print('Ground Truth file is "' + args.gt_file + '"')
+    # gt_pairs = readfile(args.gt_file)
     gt_pairs = readfile(file_2)
 
     # print('Removing stopwords is "' + str(args.remove_stopwords) + '"')
@@ -113,11 +111,12 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
                 bleu_score = 1
             # Calculate the BLEU score
             else:
-                bleu_score = nltk.translate.bleu_score.sentence_bleu([gt_words], candidate_words, smoothing_function=SmoothingFunction().method0)
+                bleu_score = nltk.translate.bleu_score.sentence_bleu([gt_words], candidate_words,
+                                                                     smoothing_function=SmoothingFunction().method0)
         # Handle problematic cases where BLEU score calculation is impossible
         except ZeroDivisionError:
             print("Problem with zero division")
-            #print('Problem with ', gt_words, candidate_words)
+            # print('Problem with ', gt_words, candidate_words)
 
         # Increase calculated score
         current_score += bleu_score
@@ -160,14 +159,15 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
         "min_words": min_words,
         "max_words": max_words,
         "words_distrib": words_distrib,
-        "avg_words_in_caption": total_words/len(gt_pairs),
+        "avg_words_in_caption": total_words / len(gt_pairs),
         "most_sentences_in_caption": max_sent,
         "obtained_score": current_score,
         "max_score": max_score,
-        "mean_bleu_score": current_score/max_score
+        "mean_bleu_score": current_score / max_score
     }
 
     return results_dict
+
 
 def readfile(file):
     path = "file"
@@ -190,6 +190,7 @@ def print_dict_sorted_num(obj):
     for key in keylist:
         print(key, ':', obj[str(key)])
 
+
 class MetricsEvaluator():
     def __init__(self, roco_path=False, mode="train"):
         """
@@ -209,8 +210,8 @@ class MetricsEvaluator():
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
 
-    
-    def evaluate_bleu(self, df_candidate: pd.DataFrame, remove_stopwords:bool=False, stemming:bool=False, case_sensitive:bool=False):
+    def evaluate_bleu(self, df_candidate: pd.DataFrame, remove_stopwords: bool = False, stemming: bool = False,
+                      case_sensitive: bool = False):
         """
         Calcula o score BLEU e retorna todas as informacoes obtidas num dicionario.
         Inputs: 
@@ -222,7 +223,8 @@ class MetricsEvaluator():
         text_buffer = io.StringIO()
         df_candidate.to_csv(text_buffer, sep="\t", index=False)
         candidate_bin = text_buffer.getvalue()
-        evaluation_dict = bleu_evaluator(self.reference_bin, candidate_bin, remove_stopwords=remove_stopwords, stemming=stemming, case_sensitive=case_sensitive)
+        evaluation_dict = bleu_evaluator(self.reference_bin, candidate_bin, remove_stopwords=remove_stopwords,
+                                         stemming=stemming, case_sensitive=case_sensitive)
         return evaluation_dict
 
     def evaluate_rouge(self, df_candidate: pd.DataFrame):
@@ -247,10 +249,10 @@ class MetricsEvaluator():
         Returns:
             f1_final_score: float -> Score ROUGE final resultado da média de todos os scores de cada linha da tabela de entrada.
         """
-         
-        print("Calculando score ROUGE...") 
 
-        #Pré processamento para fazer o merge das tabelas de entrada, de modo termos as frases candidatas e de referencia na mesma linha.                                                             
+        print("Calculando score ROUGE...")
+
+        # Pré processamento para fazer o merge das tabelas de entrada, de modo termos as frases candidatas e de referencia na mesma linha.
         stops = set(stopwords.words("english"))
         scorer = rouge_scorer.RougeScorer(['rouge1'], use_stemmer=True)
         df_merge = pd.merge(self.df_reference, df_candidate, how="inner", on=[0])
@@ -273,7 +275,7 @@ class MetricsEvaluator():
                 target_words = [word for word in target_words if word.lower() not in stops]
                 prediction_words = [word for word in prediction_words if word.lower() not in stops]
                 target_phrase = " ".join(target_words)
-                prediction_phrase =" ".join(prediction_words) 
+                prediction_phrase = " ".join(prediction_words)
 
                 # Faz a lematização (maior custo computacional desta métrica)
                 target_lemma = load_model(target_phrase)
@@ -290,7 +292,7 @@ class MetricsEvaluator():
                 continue
 
         # Tira a média de todas os scores calculados para cada linha da tabela.
-        f1_final_socore = sum(f1_scores_list)/len(f1_scores_list)
+        f1_final_socore = sum(f1_scores_list) / len(f1_scores_list)
         return f1_final_socore
 
 

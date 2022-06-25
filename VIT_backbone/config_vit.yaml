@@ -2,14 +2,14 @@
 #config this parameters after to read paper vit-transformers, else the neural network is not work!!!!!
 
 patch_size: 16
-emb_size: 768
+emb_size: 64
 img_size: 224
 num_heads: 8 # parameter dimension/heads integer number
 dropout: 0.15 # between 0~1
 expansion_embbeding: 2 
 depth: 12
 n_classes: 10
-in_channels: 1 
+in_channels: 3
 emb_size_multi_head_attention: 512
 
 #Dinamic parameters...

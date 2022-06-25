@@ -11,13 +11,13 @@ from PIL import Image
 
 from transformers import BertTokenizer, AutoTokenizer
 
-
 import os
 import re
 
 
-class RocoDataset():
-    def __init__(self, roco_path = "./",mode="train", transform=False, caption_max_length=64, keywords_max_length=8, img_size=224):
+class RocoDataset:
+    def __init__(self, roco_path="./", mode="train", transform=False, caption_max_length=9, keywords_max_length=8,
+                 img_size=224):
         """
         Inicializa a classe RocoDataset.
         Inputs:
@@ -43,34 +43,35 @@ class RocoDataset():
 
         # Converte arquivos txt para dataframes com índices iguais aos nomes da imagens
         col_names_captions = ["img_name", "caption"]
-        self.df_captions = pd.read_csv(self.captions_path, sep="	 ", header=None, index_col=0, names=col_names_captions, engine="python")
+        self.df_captions = pd.read_csv(self.captions_path, sep="	 ", header=None, index_col=0,
+                                       names=col_names_captions, engine="python")
         col_names_keywords = ["img_name", "keywords"]
-        self.df_keywords = pd.read_csv(self.keywords_path, sep="		", header=None, index_col=0, names=col_names_keywords, engine="python")
+        self.df_keywords = pd.read_csv(self.keywords_path, sep="		", header=None, index_col=0,
+                                       names=col_names_keywords, engine="python")
 
         # Considera todas as imagens que estao nao pasta como parte do dataset. Desse modo nao precisamos baixar todos os arquivos para usar esssa classe.
         self.files = os.listdir(self.imgs_path)
 
         # Podemos utilizar o Bert ou o SciBert como tokenizers, basta descomentar o que se deseja utilizar.
-        #self.tz = BertTokenizer.from_pretrained("bert-base-cased")
+        # self.tz = BertTokenizer.from_pretrained("bert-base-cased")
         self.tz = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 
         # Garante que apenas serao lidos arquivos com ROCO no inicio do nome.
         regex = re.compile(r"(.*)\.jpg")
-        self.files = [ s for s in self.files if regex.match(s) ]
+        self.files = [s for s in self.files if regex.match(s)]
 
         # Funcao de transformacao padrao que é utilizada caso o usuario nao defina nenhuma
         if transform == False:
             transform = torchvision.transforms.Compose(
-                        [torchvision.transforms.ToTensor(),
-                        torchvision.transforms.Normalize((0.5,0.5,0.5), (0.5, 0.5, 0.5)),
-                        torchvision.transforms.Resize(( self.img_size, self.img_size)),
-                        ])
+                [torchvision.transforms.ToTensor(),
+                 torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                 torchvision.transforms.Resize((self.img_size, self.img_size)),
+                 ])
         self.transform = transform
-
 
     def __len__(self):
         return len(self.files)
-    
+
     def __getitem__(self, idx):
         """
         Inputs:
@@ -94,10 +95,10 @@ class RocoDataset():
         caption_input = self.tz.encode_plus(
             text=caption,  # the sentence to be encoded
             add_special_tokens=True,  # Add [CLS] and [SEP]
-            max_length = self.caption_max_length,  # maximum length of a sentence
+            max_length=self.caption_max_length,  # maximum length of a sentence
             padding="max_length",  # Add [PAD]s
-            return_tensors = 'pt',  # ask the function to return PyTorch tensors
-            truncation = True,
+            return_tensors='pt',  # ask the function to return PyTorch tensors
+            truncation=True,
         )["input_ids"]
         # Faz o shift em uma unidade do tensor tokenizado das legendas, criando um vetor de target.
         caption_target = torch.roll(caption_input, 1)
@@ -107,15 +108,13 @@ class RocoDataset():
         keywords_input = self.tz.encode_plus(
             text=keywords,  # the sentence to be encoded
             add_special_tokens=False,  # Add [CLS] and [SEP]
-            max_length = self.keywords_max_length,  # maximum length of a sentence
+            max_length=self.keywords_max_length,  # maximum length of a sentence
             padding="max_length",  # Add [PAD]s
-            return_tensors = 'pt',  # ask the function to return PyTorch tensors
-            truncation = True,
+            return_tensors='pt',  # ask the function to return PyTorch tensors
+            truncation=True,
         )["input_ids"]
 
-
         return img, caption_input[0], caption_target[0], keywords_input, self.files[idx][:-4]
-        
 
 
 if __name__ == "__main__":
@@ -131,12 +130,9 @@ if __name__ == "__main__":
 
     # Exemplo de como utilizar o RocoDataset com um DataLoader
     from torch.utils.data import DataLoader
-    roco_loader = DataLoader(dataset, batch_size = 10, shuffle=True)
+
+    roco_loader = DataLoader(dataset, batch_size=10, shuffle=True)
     img, caption_input, caption_target, keywords_input, img_name = next(iter(roco_loader))
     print(img_name)
-    plt.imshow(  img[0].permute(1, 2, 0)  )
+    plt.imshow(img[0].permute(1, 2, 0))
     plt.show()
-
-
-
-

@@ -8,6 +8,14 @@ tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 with open('transformer_decoder/config_decoder.yaml', 'r') as file:
     parameters = yaml.safe_load(file)
 
+if torch.cuda.is_available():
+    dev = "cuda:0"
+else:
+    dev = "cpu"
+
+device = torch.device(dev)
+print('Using {}'.format(device))
+
 
 class Embedder(torch.nn.Module):
     def __init__(self, max_seq_length: int = parameters['max_seq_length'],
@@ -48,12 +56,12 @@ class MultiHeadSelfAttention(torch.nn.Module):
         self.W_o = torch.nn.Linear(embedding_dim, embedding_dim, bias=False)
 
     @staticmethod
-    def self_attention(q, k, v, mask):
+    def self_attention(q, k, v, mask=None):
         """Tenho a ponderação de todos os tokens contra todos"""
         s = torch.matmul(q, k.transpose(-2, -1))
-
         """preenchimento da mascara"""
-        s = s.masked_fill(mask.unsqueeze(1) == 0, -float("inf"))
+        if mask is not None:
+            s = s.masked_fill(mask.unsqueeze(1) == 0, -float("inf"))
 
         """mascara aplicando softmax"""
         p = torch.nn.functional.softmax(s, dim=-1)
@@ -62,7 +70,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
 
         return att_output.transpose(1, 2)
 
-    def forward(self, inputs, mask):
+    def forward(self, inputs, embbeding_V, embbeding_K, mask=None):
         batch_size = inputs.shape[0]
 
         """
@@ -70,14 +78,15 @@ class MultiHeadSelfAttention(torch.nn.Module):
         """
 
         q = self.W_q(inputs)
+        print(f"shape do q {q.shape}")
         q = q.view(batch_size, self.max_seq_length, self.num_heads, -1)
         q = q.transpose(1, 2)
 
-        k = self.W_k(inputs)
+        k = self.W_k(embbeding_K)
         k = k.view(batch_size, self.max_seq_length, self.num_heads, -1)
         k = k.transpose(1, 2)
 
-        v = self.W_v(inputs)
+        v = self.W_v(embbeding_V)
         v = v.view(batch_size, self.max_seq_length, self.num_heads, -1)
         v = v.transpose(1, 2)
 
@@ -94,7 +103,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
         return att_output
 
 
-class TransformerEncoderBlock(torch.nn.Module):
+class TransformerDecoderBlock(torch.nn.Module):
     def __init__(self,
                  depth: int = 2,
                  forward_expansion=parameters['forward_expansion'],
@@ -108,11 +117,11 @@ class TransformerEncoderBlock(torch.nn.Module):
         self.multi_head_self_attention = MultiHeadSelfAttention(emb_size, **kwargs)
         self.dropout = torch.nn.Dropout(drop_p)
 
-    def forward(self, inputs, mask):
+    def forward(self, inputs, embbeding_V, embbeding_K, mask=None):
         residue = inputs
 
         x = self.layer_norm(inputs)
-        x = self.multi_head_self_attention(x, mask)
+        x = self.multi_head_self_attention(x, embbeding_V, embbeding_K, mask)
         x = self.dropout(x)
 
         x = x + residue
@@ -120,23 +129,23 @@ class TransformerEncoderBlock(torch.nn.Module):
         return x
 
 
-class TransformerEncoder(torch.nn.Module):
+class TransformerDecoder(torch.nn.Module):
     def __init__(self,
                  **kwargs):
         super().__init__()
 
-        self.layer = TransformerEncoderBlock(**kwargs)
+        self.layer = TransformerDecoderBlock(**kwargs)
 
-        self.layer_2 = TransformerEncoderBlock(**kwargs)
+        self.layer_2 = TransformerDecoderBlock(**kwargs)
 
-        self.layer_3 = TransformerEncoderBlock(**kwargs)
+        self.layer_3 = TransformerDecoderBlock(**kwargs)
 
-    def forward(self, inputs, mask):
-        x = self.layer(inputs, mask)
+    def forward(self, inputs, embbeding_V, embbeding_K, mask=None):
+        x = self.layer(inputs, embbeding_V, embbeding_K, mask)
 
-        x = self.layer_2(x, mask)
+        x = self.layer_2(x, embbeding_V, embbeding_K, mask)
 
-        x = self.layer_3(x, mask)
+        x = self.layer_3(x, embbeding_V, embbeding_K, mask)
 
         return x
 
@@ -181,7 +190,7 @@ class LanguageModel(torch.nn.Sequential):
 
         self.embedder = Embedder(max_seq_length, vocab_size, dim, pad_token_id)
 
-        self.transformer_encoder = TransformerEncoder(depth=parameters['depth'],
+        self.transformer_decoder = TransformerDecoder(depth=parameters['depth'],
                                                       emb_size=parameters['embbeding'],
                                                       drop_p=parameters['drop_p'],
                                                       forward_expansion=parameters['forward_expansion'],
@@ -192,12 +201,25 @@ class LanguageModel(torch.nn.Sequential):
 
         self.classifier = Classifier(dim, vocab_size)
 
-    def forward(self, inputs):
+    def forward(self, inputs, embbeding_V, embbeding_K):
+
         mask = self.mask(inputs)
 
         inputs_embbedings = self.embedder(inputs)
 
-        output_transformers = self.transformer_encoder(inputs_embbedings, mask)
+        h = inputs_embbedings
+
+        print(f"input embbedings {inputs_embbedings.shape}")
+
+        output_decoder = self.transformer_decoder(inputs_embbedings, inputs_embbedings, inputs_embbedings, mask)
+
+        inputs_embbedings = output_decoder + h
+
+        h = inputs_embbedings
+
+        output_transformers = self.transformer_decoder(inputs_embbedings, embbeding_V, embbeding_K)
+
+        output_transformers = output_transformers + h
 
         outputs = self.classifier(output_transformers)
 
@@ -210,20 +232,13 @@ if __name__ == "__main__":
     from tqdm.notebook import tqdm
     from torch.utils.data import DataLoader
 
-    if torch.cuda.is_available():
-        dev = "cuda:0"
-    else:
-        dev = "cpu"
-    device = torch.device(dev)
-    print('Using {}'.format(device))
-
 
     def tokenize(text: str, tokenizer):
         # Recomenda-se usar o tokenizer.batch_encode_plus pois é mais rápido.
         return tokenizer(text, return_tensors=None, add_special_tokens=False).input_ids
 
 
-    class MyDataset():
+    class MyDataset:
         def __init__(self, texts: List[str], tokenizer, max_seq_length: int):
             self.max_seq_length = max_seq_length
             self.tokenized_texts = []
