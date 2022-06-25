@@ -4,55 +4,17 @@
 # In[1]:
 
 
-import yaml
 from torch import nn
-from torchsummary import summary
-from PIL import Image
-from torchvision.transforms import Compose, Resize, ToTensor
-from VIT_backbone.vit_transformer import PatchEmbedding, TransformerEncoder
-from transformer_decoder.transformer_decoder import LanguageModel
 from transformers import AutoTokenizer
 import torch
 from torch.utils.data import DataLoader
-from einops.layers.torch import Reduce
-from einops import repeat
+import numpy as np
 from dataset_structure.medical_datasets import RocoDataset
+from EncoderDecoder import EncoderDecoder
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 
 if __name__ == "__main__":
-
-    with open('VIT_backbone/config_vit.yaml', 'r') as file:
-        parameters = yaml.safe_load(file)
-
-
-    class ViT(nn.Sequential):
-        def __init__(self,
-                     in_channels: int = parameters['in_channels'],
-                     patch_size: int = parameters['patch_size'],
-                     emb_size: int = parameters['emb_size'],
-                     img_size: int = parameters['img_size'],
-                     depth: int = parameters['depth'],
-                     **kwargs):
-            super().__init__(
-                PatchEmbedding(in_channels, patch_size, emb_size, img_size),
-                TransformerEncoder(depth, emb_size=emb_size, **kwargs),
-                Reduce('b n e -> b e', reduction='mean'),
-            )
-
-
-    img = Image.open('img_test.jpg')
-
-    transform = Compose([Resize((224, 224)), ToTensor()])
-    x = transform(img)
-    x = x.unsqueeze(0)  # add batch dim
-    print(x.shape)
-
-    vision_transformer = ViT()
-
-    summary(vision_transformer)
-
-    output_encoder = vision_transformer.forward(x)
 
     if torch.cuda.is_available():
         dev = "cuda:0"
@@ -61,29 +23,87 @@ if __name__ == "__main__":
     device = torch.device(dev)
     print('Using {}'.format(device))
 
-    max_seq_length = 9
+    model = EncoderDecoder()
+    model.to(device)
 
-    model = LanguageModel(
-        vocab_size=tokenizer.vocab_size,
-        max_seq_length=max_seq_length,
-        dim=64,
-        pad_token_id=tokenizer.pad_token_id,
-    ).to(device)
+    roco_path = "roco-dataset"
+    train_loader = RocoDataset(roco_path=roco_path, mode="train")
+    valid_loader = RocoDataset(roco_path=roco_path, mode="validation")
 
-    roco_path = "roco-dataset/"
-    dataset = RocoDataset(roco_path=roco_path, mode="train")
-    sample_img = dataset[1]
+    train_loader = DataLoader(train_loader, batch_size=5, shuffle=True, drop_last=True)
+    validation_loader = DataLoader(valid_loader, batch_size=5)
 
-    roco_loader = DataLoader(dataset, batch_size=10, shuffle=True)
-    img, caption_input, caption_target, keywords_input, img_name = next(iter(roco_loader))
+    lr = 3e-5
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    output_encoder = vision_transformer.forward(img)
 
-    print(output_encoder.shape)
+    def train_step(input, caption_input, caption_target):
+        model.train()
+        model.zero_grad()
 
-    output_encoder = repeat(output_encoder, 'b c -> b r c', r=max_seq_length)
+        logits = model.forward(input,
+                               caption_input)
 
-    print(f"shape da saida: {output_encoder.shape}")
+        logits = logits.reshape(-1, logits.shape[-1])
 
-    model(caption_input.to(device), output_encoder.to(device), output_encoder.to(device))
+        caption_target = caption_target.reshape(-1)
 
+        loss = nn.functional.cross_entropy(logits, caption_target)
+
+        loss.backward()
+
+        optimizer.step()
+
+        return loss.item()
+
+
+    def validation_step(input, caption_input, caption_target):
+        model.eval()
+        logits = model.forward(input,
+                               caption_input)
+
+        logits = logits.reshape(-1, logits.shape[-1])
+
+        caption_target = caption_target.reshape(-1)
+
+        loss = nn.functional.cross_entropy(logits, caption_target)
+
+        return loss.item()
+
+
+    train_losses = []
+    n_examples = 0
+    step = 0
+
+    max_examples = 10000
+    eval_every_steps = 1
+
+    # while n_examples < max_examples:
+    for img, caption_input, caption_target, _, _ in train_loader:
+
+        img, caption_input, caption_target = img.to(device), caption_input.to(device), caption_target.to(device)
+
+        loss = train_step(img, caption_input, caption_target)
+        train_losses.append(loss)
+
+        # if step % eval_every_steps == 0:
+        #     train_ppl = np.exp(np.average(train_losses))
+        #
+        #     with torch.no_grad():
+        #         valid_ppl = np.exp(np.average([
+        #             validation_step(img.to(device),
+        #                             caption_input.to(device),
+        #                             caption_target.to(device))
+        #             for img, caption_input, caption_target, _, _ in validation_loader]))
+        #
+        #         if valid_ppl < compare:
+        #             compare = valid_ppl
+        #     print(
+        #         f'{step} steps; {n_examples} examples so far; train ppl: {train_ppl:.2f}, valid ppl: {valid_ppl:.2f}')
+        print(
+            f'train ppl: {loss:.2f}'
+        )
+            # n_examples += len(caption_input)  # Increment of batch size
+            # step += 1
+            # if n_examples >= max_examples:
+            #     break

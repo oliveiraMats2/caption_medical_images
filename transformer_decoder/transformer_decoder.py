@@ -80,7 +80,6 @@ class MultiHeadSelfAttention(torch.nn.Module):
         inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=self.max_seq_length)
 
         q = self.W_q(inputs)
-        print(f"shape do q {q.shape}")
 
         q = q.view(batch_size, self.max_seq_length, self.num_heads, -1)
         q = q.transpose(1, 2)
@@ -376,7 +375,9 @@ if __name__ == "__main__":
                         for val_input_ids, val_target_ids in validation_loader]))
 
                 print(
-                    f'{step} steps; {n_examples} examples so far; train ppl: {train_ppl:.2f}, valid ppl: {valid_ppl:.2f}')
+                    f'{step} steps; {n_examples} examples so far; train ppl: {train_ppl:.2f}, valid ppl: {valid_ppl:.2f}'
+                )
+
                 train_losses = []
 
                 scheduler.step(valid_ppl)
