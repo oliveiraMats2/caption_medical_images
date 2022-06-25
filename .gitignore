@@ -1,15 +1,31 @@
 .ipynb_checkpoints/
 
-VIT_backbone/__pycache__/vit_transformer.cpython-39.pyc
+models/VIT_backbone/__pycache__/vit_transformer.cpython-39.pyc
 
-transformer_decoder/sample-1gb.txt
-
+models/transformer_decoder/sample-1gb.txt
+models/transformer_decoder/.neptune/
 .gitignore
 
-VIT_backbone/VIT_transformer_debug.ipynb
+notebooks/VIT_transformer_debug.ipynb
 
 .idea/
 
 ../data/test/radiology/images/
 ../data/train/radiology/images/
 ../data/validation/radiology/images/
+
+__pycache__/
+
+roco-dataset/
+
+models/transformer_decoder/.neptune/async/model__969282f3-b4db-4e9e-940a-446611347406/exec-0-2022-06-18_10.47.43.813500/data-1.log
+
+models/transformer_decoder/.neptune/async/model__969282f3-b4db-4e9e-940a-446611347406/exec-0-2022-06-18_10.47.43.813500/last_ack_version
+
+models/transformer_decoder/.neptune/async/model__969282f3-b4db-4e9e-940a-446611347406/exec-0-2022-06-18_10.47.43.813500/last_put_version
+
+models/VIT_backbone/.neptune/async/run__969280ef-d3f5-4128-bc4c-f34923b63e6e/exec-0-2022-06-18_10.42.05.823814/data-1.log
+
+models/VIT_backbone/.neptune/async/run__969280ef-d3f5-4128-bc4c-f34923b63e6e/exec-0-2022-06-18_10.42.05.823814/last_ack_version
+
+models/VIT_backbone/.neptune/async/run__969280ef-d3f5-4128-bc4c-f34923b63e6e/exec-0-2022-06-18_10.42.05.823814/last_put_version

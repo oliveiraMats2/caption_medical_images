@@ -3,10 +3,11 @@ import yaml
 from transformers import AutoTokenizer
 from einops import repeat
 import numpy as np
+from constants import *
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 
-with open('transformer_decoder/config_decoder.yaml', 'r') as file:
+with open(f'{ABS_PATH}/config_models/config_decoder.yaml', 'r') as file:
     parameters = yaml.safe_load(file)
 
 if torch.cuda.is_available():
@@ -204,7 +205,7 @@ class LanguageModel(torch.nn.Sequential):
         self.classifier = Classifier(dim, vocab_size)
 
     def forward(self, inputs, embbeding_V, embbeding_K):
-        mask = self.mask(inputs)
+        mask = self.mask.forward(inputs)
 
         inputs_embbedings = self.embedder(inputs)
 

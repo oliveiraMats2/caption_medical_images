@@ -8,9 +8,8 @@ from torch import nn
 from transformers import AutoTokenizer
 import torch
 from torch.utils.data import DataLoader
-import numpy as np
-from dataset_structure.medical_datasets import RocoDataset
-from EncoderDecoder import EncoderDecoder
+from data_folder.medical_datasets import RocoDataset
+from models.EncoderDecoder import EncoderDecoder
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 

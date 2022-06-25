@@ -1,12 +1,13 @@
-from VIT_backbone.vit_transformer import PatchEmbedding, TransformerEncoder
-from transformer_decoder.transformer_decoder import LanguageModel
+from models.VIT_backbone.vit_transformer import PatchEmbedding, TransformerEncoder
+from models.transformer_decoder.transformer_decoder import LanguageModel
 from einops import repeat
 from torch import nn
 from transformers import AutoTokenizer
 from einops.layers.torch import Reduce
 import yaml
+from constants import *
 
-with open('VIT_backbone/config_vit.yaml', 'r') as file:
+with open(f'{ABS_PATH}/config_models/config_vit.yaml', 'r') as file:
     parameters = yaml.safe_load(file)
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')

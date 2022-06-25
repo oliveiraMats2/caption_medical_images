@@ -299,13 +299,13 @@ class MetricsEvaluator():
 if __name__ == '__main__':
     # Exemplo de utilizacao da classe BleuEvaluator.
     # Neste caso o df_evaluation é o mesmo que o arquivo de referencia apenas para fins de teste. Em um caso real, este dataframe deveria ser construído a partir da predicao da rede neural.
-    path_file = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset/data/test/radiology/captions.txt"
+    path_file = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/data_folder/roco-dataset/data/test/radiology/captions.txt"
     df_evaluation = pd.read_csv(path_file, sep="\t", header=None)
     text_buffer = io.StringIO()
     df_evaluation.to_csv(text_buffer, sep="\t", index=False)
     text_buffer_content = text_buffer.getvalue()
 
-    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset/"
+    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/data_folder/roco-dataset/"
     evaluator = MetricsEvaluator(roco_path=roco_path, mode="test")
     bleu = evaluator.evaluate_bleu(df_evaluation, case_sensitive=True, stemming=True, remove_stopwords=True)
     print(bleu)
