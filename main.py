@@ -15,6 +15,7 @@ from utils.save_best_model import SaveBestModel
 from models.EncoderDecoder import EncoderDecoder
 from constants import *
 import yaml
+from log_monitoring.neptune_monitoring import NeptuneMonitoring
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 
@@ -87,10 +88,29 @@ if __name__ == "__main__":
     n_examples = 0
     epoch = 0
     eval_every_steps = 1
+    API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Y2ExODNjZi1lMWVjLTQyMmItODgzMy1iY2NiN2NkMDAwODQifQ=="
+
+    PROJECT_NAME = "oliveira1/captionMedicalImage"
 
     print(f"Inicializando laço de treinamento")
 
+    parameters = {
+        "lr": 3e-5,
+        "bs": 5,
+        "model_filename": "basemodel",
+        "device": "gpu",
+    }
+
     save_best_model = SaveBestModel()
+
+    neptune_monitoring = NeptuneMonitoring(parameters,
+                                           API_TOKEN,
+                                           PROJECT_NAME,
+                                           model='vit_transformer',
+                                           criterion="Cross Entropy Loss",
+                                           optimizer="Adam"
+                                           )
+    neptune_monitoring.start()
 
     for img, caption_input, caption_target, _, _ in tqdm(train_loader):
 
@@ -118,4 +138,13 @@ if __name__ == "__main__":
         print(
             f'{n_examples} examples so far; train ppl: {train_ppl:.2f}, valid ppl: {valid_ppl:.2f}'
         )
+        neptune_monitoring.log_metrics(step=epoch,
+                                       mode='train',
+                                       perplexity=train_ppl)
+
+        neptune_monitoring.log_metrics(step=epoch,
+                                       mode='validation',
+                                       perplexity=valid_ppl)
         epoch += 1
+
+    neptune_monitoring.stop()
