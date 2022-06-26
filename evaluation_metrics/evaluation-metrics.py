@@ -28,12 +28,6 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
     total_words = 0
     words_distrib = {}
 
-    # NLTK
-    # Download Punkt tokenizer (for word_tokenize method)
-    # Download stopwords (for stopword removal)
-    # nltk.download('punkt', quiet=True)
-    # nltk.download('stopwords', quiet=True)
-
     # English Stopwords
     stops = set(stopwords.words("english"))
 
@@ -43,35 +37,11 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
     # Remove punctuation from string
     translator = str.maketrans('', '', string.punctuation)
 
-    # Parse arguments
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('candidate_file', help='path to the candidate file to evaluate')
-    # parser.add_argument('gt_file', help='path to the ground truth file')
-    # parser.add_argument('-r', '--remove-stopwords', default=False, action='store_true', help='enable stopword removal')
-    # parser.add_argument('-s', '--stemming', default=False, action='store_true', help='enable stemming')
-    # parser.add_argument('-c', '--case-sensitive', default=False, action='store_true', help='case-sensitive evaluation')
-    # args = parser.parse_args()
 
-    # Read files
-    # print('Input parameters\n********************************')
-
-    # print('Candidate file is "' + args.candidate_file + '"')
-    # candidate_pairs = readfile(args.candidate_file)
     candidate_pairs = readfile(file_1)
-
-    # print('Ground Truth file is "' + args.gt_file + '"')
-    # gt_pairs = readfile(args.gt_file)
     gt_pairs = readfile(file_2)
-
-    # print('Removing stopwords is "' + str(args.remove_stopwords) + '"')
-    # print('Stemming is "' + str(args.stemming) + '"')
-
-    # Define max score and current score
     max_score = len(gt_pairs)
     current_score = 0
-
-    # Evaluate each candidate caption against the ground truth
-    # print('Processing captions...\n********************************')
 
     i = 0
     print("Calculando score BLEU...")
@@ -135,25 +105,6 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
 
         if len(gt_sentences) > max_sent:
             max_sent = len(gt_sentences)
-
-        # Progress display
-        # i += 1
-        # if i % 1000 == 0:
-        #     print(i, '/', len(gt_pairs), ' captions processed...')
-
-    # Print stats
-    # print('Corpus statistics\n********************************')
-    # print('Number of words distribution')
-    # print_dict_sorted_num(words_distrib)
-    # print('Least words in caption :', min_words)
-    # print('Most words in caption :', max_words)
-    # print('Average words in caption :', total_words / len(gt_pairs))
-    # print('Most sentences in caption :', max_sent)
-
-    # Print evaluation result
-    # print('Final result\n********************************')
-    # print('Obtained score :', current_score, '/', max_score)
-    # print('Mean score over all captions :', current_score / max_score)
 
     results_dict = {
         "min_words": min_words,
@@ -299,13 +250,13 @@ class MetricsEvaluator():
 if __name__ == '__main__':
     # Exemplo de utilizacao da classe BleuEvaluator.
     # Neste caso o df_evaluation é o mesmo que o arquivo de referencia apenas para fins de teste. Em um caso real, este dataframe deveria ser construído a partir da predicao da rede neural.
-    path_file = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/data_folder/roco-dataset/data/test/radiology/captions.txt"
+    path_file = "./captions.txt"
     df_evaluation = pd.read_csv(path_file, sep="\t", header=None)
     text_buffer = io.StringIO()
     df_evaluation.to_csv(text_buffer, sep="\t", index=False)
     text_buffer_content = text_buffer.getvalue()
 
-    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/data_folder/roco-dataset/"
+    roco_path = "./roco-dataset"
     evaluator = MetricsEvaluator(roco_path=roco_path, mode="test")
     bleu = evaluator.evaluate_bleu(df_evaluation, case_sensitive=True, stemming=True, remove_stopwords=True)
     print(bleu)
