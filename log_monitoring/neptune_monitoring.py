@@ -1,9 +1,8 @@
-
 import neptune.new as neptune
 
 
-class NeptuneMonitoring():
-    def __init__(self, hyperparameters:dict, API_TOKEN:str,  project_name:str, model, criterion, optimizer):
+class NeptuneMonitoring:
+    def __init__(self, hyperparameters: dict, API_TOKEN: str, project_name: str, model, criterion, optimizer):
         """
         Classe responsável por gerenciar o monitoramento da execução no Neptune 
         Rodar as dependencias abaixo para que o codigo nao tenha prolemas:
@@ -45,7 +44,7 @@ class NeptuneMonitoring():
         self.run["config/criterion"] = self.criterion_name
         self.run["config/optimizer"] = self.optimizer_name
 
-    def log_metrics(self, step:int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None):
+    def log_metrics(self, step: int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None):
         """
         Grava os logs de métricas 
         Inputs:
@@ -56,9 +55,9 @@ class NeptuneMonitoring():
             perplexity: Caso diferente de None, salva o score de perplexidade dessa rodada
             loss: Caso diferente de None, salva o score de loss dessa rodada
         """
-        if (mode!="train") and (mode!="validation") and (mode!="test"):
-            raise("Please, provide a valid mode name (train, validation or test)")
-        
+        if (mode != "train") and (mode != "validation") and (mode != "test"):
+            raise ("Please, provide a valid mode name (train, validation or test)")
+
         if bleu is not None:
             self.run["training/batch/bleu"].log(bleu)
         if rouge is not None:
@@ -67,7 +66,7 @@ class NeptuneMonitoring():
             self.run["training/batch/perplexity"].log(perplexity)
         if loss is not None:
             self.run["training/batch/loss"].log(loss)
-    
+
     def stop(self):
         print("Stopping Neptune monitoring...")
         self.run.stop()
@@ -75,25 +74,24 @@ class NeptuneMonitoring():
 
 if __name__ == "__main__":
     parameters = {
-    "lr":3e-5,
-    "bs": 5,
-    "model_filename": "basemodel",
-    "device": "cpu",
+        "lr": 3e-5,
+        "bs": 5,
+        "model_filename": "basemodel",
+        "device": "cpu",
     }
-    NEPTUNE_API_TOKEN = "teste"
+    NEPTUNE_API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Y2ExODNjZi1lMWVjLTQyMmItODgzMy1iY2NiN2NkMDAwODQifQ=="
 
     model = "test_model"
     criterion = "Cross Entropy Loss"
     optimizer = "Adam"
 
-    project="p175857/IA025-Neptune-Test"
+    project = "oliveira1/captionMedicalImage"
     neptune_monitoring = NeptuneMonitoring(
-                                        API_TOKEN=NEPTUNE_API_TOKEN,
-                                        project_name=project,
-                                        hyperparameters=parameters,
-                                        model=model,
-                                        criterion=criterion,
-                                        optimizer = optimizer  )
+        API_TOKEN=NEPTUNE_API_TOKEN,
+        project_name=project,
+        hyperparameters=parameters,
+        model=model,
+        criterion=criterion,
+        optimizer=optimizer)
     neptune_monitoring.start()
     neptune_monitoring.stop()
-    
