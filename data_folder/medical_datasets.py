@@ -101,8 +101,8 @@ class RocoDataset:
             truncation=True,
         )["input_ids"]
         # Faz o shift em uma unidade do tensor tokenizado das legendas, criando um vetor de target.
-        caption_target = torch.roll(caption_input, 1)
-        caption_target[0][0] = 0
+        caption_target = torch.roll(caption_input, -1)
+        caption_target[0][-1] = 0
 
         # Tokeniza a as palavras-chave com padding mas sem adicionar tokens especiais.
         keywords_input = self.tz.encode_plus(
@@ -118,7 +118,7 @@ class RocoDataset:
 
 
 if __name__ == "__main__":
-    roco_path = "./roco-dataset"
+    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset"
     dataset = RocoDataset(roco_path=roco_path, mode="train")
     sample_img = dataset[1]
     # print(sample_img[0].shape)
@@ -132,7 +132,15 @@ if __name__ == "__main__":
     from torch.utils.data import DataLoader
 
     roco_loader = DataLoader(dataset, batch_size=10, shuffle=True)
+
     img, caption_input, caption_target, keywords_input, img_name = next(iter(roco_loader))
+
+    print(caption_input[0])
+    print(caption_target[0])
+    print("-------")
+    print(caption_input[1])
+    print(caption_target[1])
+
     print(img_name)
     plt.imshow(img[0].permute(1, 2, 0))
     plt.show()
