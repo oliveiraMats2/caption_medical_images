@@ -67,7 +67,8 @@ class NeptuneMonitoring():
             self.run["training/batch/perplexity"].log(perplexity)
         if loss is not None:
             self.run["training/batch/loss"].log(loss)
-    
+        self.run["training/batch/step"].log(step)
+
     def stop(self):
         print("Stopping Neptune monitoring...")
         self.run.stop()
