@@ -8,17 +8,20 @@ import yaml
 from constants import *
 
 with open(f'{ABS_PATH}/config_models/config_vit.yaml', 'r') as file:
-    parameters = yaml.safe_load(file)
+    parameters_enc = yaml.safe_load(file)
+
+with open(f'{ABS_PATH}/config_models/config_decoder.yaml', 'r') as file:
+    parameters_dec = yaml.safe_load(file)
 
 tokenizer = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
 
 class ViT(nn.Sequential):
     def __init__(self,
-                 in_channels: int = parameters['in_channels'],
-                 patch_size: int = parameters['patch_size'],
-                 emb_size: int = parameters['emb_size'],
-                 img_size: int = parameters['img_size'],
-                 depth: int = parameters['depth'],
+                 in_channels: int = parameters_enc['in_channels'],
+                 patch_size: int = parameters_enc['patch_size'],
+                 emb_size: int = parameters_enc['emb_size'],
+                 img_size: int = parameters_enc['img_size'],
+                 depth: int = parameters_enc['depth'],
                  **kwargs):
         super().__init__(
             PatchEmbedding(in_channels, patch_size, emb_size, img_size),
@@ -36,11 +39,11 @@ class EncoderDecoder(nn.Module):
 
         self.vit = ViT()
         self.model_decoder = LanguageModel(vocab_size=tokenizer.vocab_size,
-                                           max_seq_length=9,
-                                           dim=64,
+                                           max_seq_length=parameters_dec['max_seq_length'],
+                                           dim=parameters_dec['embbeding'],
                                            pad_token_id=tokenizer.pad_token_id,
                                            )
-        self.max_seq_length = 9
+        self.max_seq_length = parameters_dec['max_seq_length']
 
     def forward(self, img, caption_input):
         emb_encoder = self.vit(img)

@@ -263,7 +263,7 @@ if __name__ == "__main__":
             return x_y[:-1], x_y[1:]
 
 
-    seq_length = 9
+    seq_length = parameters['max_seq_length']
 
     max_seq_length = seq_length
 
