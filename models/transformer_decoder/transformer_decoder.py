@@ -78,7 +78,10 @@ class MultiHeadSelfAttention(torch.nn.Module):
         """
         Modificar o codigo aqui para entrar o embbeding do modelo encoder.
         """
-        inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=self.max_seq_length)
+
+        not_repeat = 1
+
+        # inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=not_repeat)
 
         q = self.W_q(inputs)
 
@@ -121,13 +124,9 @@ class TransformerDecoderBlock(torch.nn.Module):
         self.dropout = torch.nn.Dropout(drop_p)
 
     def forward(self, inputs, embbeding_V, embbeding_K, mask=None):
-        residue = inputs
-
         x = self.layer_norm(inputs)
         x = self.multi_head_self_attention(x, embbeding_V, embbeding_K, mask)
         x = self.dropout(x)
-
-        x = x + residue
 
         return x
 
@@ -204,24 +203,31 @@ class LanguageModel(torch.nn.Sequential):
 
         self.classifier = Classifier(dim, vocab_size)
 
-    def forward(self, inputs, embbeding_V, embbeding_K):
+    def forward(self, inputs,
+                embbeding_V,
+                embbeding_K):
         mask = self.mask.forward(inputs)
 
-        inputs_embbedings = self.embedder(inputs)
+        inputs_embbedings = self.embedder.forward(inputs)
 
         h = inputs_embbedings
 
-        output_decoder = self.transformer_decoder(inputs_embbedings, inputs_embbedings, inputs_embbedings, mask)
+        output_decoder = self.transformer_decoder.forward(inputs_embbedings,
+                                                          inputs_embbedings,
+                                                          inputs_embbedings,
+                                                          mask)
 
         inputs_embbedings = output_decoder + h
 
         h = inputs_embbedings
 
-        output_transformers = self.transformer_decoder(inputs_embbedings, embbeding_V, embbeding_K)
+        output_transformers = self.transformer_decoder.forward(inputs_embbedings,
+                                                               embbeding_V,
+                                                               embbeding_K)
 
         output_transformers = output_transformers + h
 
-        outputs = self.classifier(output_transformers)
+        outputs = self.classifier.forward(output_transformers)
 
         return outputs
 
