@@ -30,6 +30,5 @@ models/VIT_backbone/.neptune/async/run__969280ef-d3f5-4128-bc4c-f34923b63e6e/exe
 
 models/VIT_backbone/.neptune/async/run__969280ef-d3f5-4128-bc4c-f34923b63e6e/exec-0-2022-06-18_10.42.05.823814/last_put_version
 
-weight_models/
 
 .neptune/

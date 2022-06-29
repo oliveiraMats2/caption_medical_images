@@ -59,13 +59,14 @@ class NeptuneMonitoring:
             raise ("Please, provide a valid mode name (train, validation or test)")
 
         if bleu is not None:
-            self.run["training/batch/bleu"].log(bleu)
+            self.run[ mode + "/batch/bleu"].log(bleu)
         if rouge is not None:
-            self.run["training/batch/rouge"].log(rouge)
+            self.run[mode + "/batch/rouge"].log(rouge)
         if perplexity is not None:
-            self.run["training/batch/perplexity"].log(perplexity)
+            self.run[ mode + "/batch/perplexity"].log(perplexity)
         if loss is not None:
-            self.run["training/batch/loss"].log(loss)
+            self.run[ mode + "/batch/loss"].log(loss)
+        self.run[mode + "/batch/step"].log(step)
 
     def stop(self):
         print("Stopping Neptune monitoring...")

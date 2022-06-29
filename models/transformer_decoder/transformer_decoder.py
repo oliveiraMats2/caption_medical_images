@@ -79,9 +79,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
         Modificar o codigo aqui para entrar o embbeding do modelo encoder.
         """
 
-        not_repeat = 1
-
-        # inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=not_repeat)
+        inputs = repeat(inputs[:, -1, :], 'b c -> b r c', r=self.max_seq_length)
 
         q = self.W_q(inputs)
 

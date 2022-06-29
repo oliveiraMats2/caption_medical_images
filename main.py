@@ -35,6 +35,7 @@ if __name__ == "__main__":
     model.to(device)
 
     roco_path = "roco-dataset"
+    #roco_path = "/content/caption_medical_images/data_folder/drive/MyDrive/RocoDataset"
     train_loader = RocoDataset(roco_path=roco_path,
                                mode="train",
                                caption_max_length=parameters_dec['max_seq_length'])
@@ -111,6 +112,9 @@ if __name__ == "__main__":
                                            optimizer="Adam"
                                            )
     neptune_monitoring.start()
+
+    load_dict = torch.load("weight_models/model_base_line_26_jun.pt")
+    model.load_state_dict(load_dict['model_state_dict'])
 
     for img, caption_input, caption_target, _, _ in tqdm(train_loader):
 

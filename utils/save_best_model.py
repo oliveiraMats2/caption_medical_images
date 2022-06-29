@@ -20,4 +20,4 @@ class SaveBestModel:
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': criterion,
-            }, "weight_models/model_base_line_26_jun.pt")
+            }, "weight_models/model_base_line_28_jun_2.pt")
