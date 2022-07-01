@@ -17,7 +17,7 @@ import re
 
 class RocoDataset:
     def __init__(self, roco_path="./", mode="train", transform=False, caption_max_length=9, keywords_max_length=8,
-                 img_size=224):
+                 img_size=224, tokenizer=False):
         """
         Inicializa a classe RocoDataset.
         Inputs:
@@ -54,7 +54,10 @@ class RocoDataset:
 
         # Podemos utilizar o Bert ou o SciBert como tokenizers, basta descomentar o que se deseja utilizar.
         # self.tz = BertTokenizer.from_pretrained("bert-base-cased")
-        self.tz = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
+        if tokenizer is False:
+            self.tz = AutoTokenizer.from_pretrained('allenai/scibert_scivocab_cased')
+        else: 
+            self.tz = tokenizer
 
         # Garante que apenas serao lidos arquivos com ROCO no inicio do nome.
         regex = re.compile(r"(.*)\.jpg")
@@ -119,14 +122,10 @@ class RocoDataset:
 
 if __name__ == "__main__":
     roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset"
-    dataset = RocoDataset(roco_path=roco_path, mode="train")
+    from transformers import T5Tokenizer
+    tokenizer = T5Tokenizer.from_pretrained("t5-small")
+    dataset = RocoDataset(roco_path=roco_path, mode="train", tokenizer=tokenizer)
     sample_img = dataset[1]
-    # print(sample_img[0].shape)
-    # print(sample_img[1])
-    # print(sample_img[2])
-    # print(sample_img[3])
-    # plt.imshow(  sample_img[0].permute(1, 2, 0)  )
-    # plt.show()
 
     # Exemplo de como utilizar o RocoDataset com um DataLoader
     from torch.utils.data import DataLoader
@@ -135,12 +134,8 @@ if __name__ == "__main__":
 
     img, caption_input, caption_target, keywords_input, img_name = next(iter(roco_loader))
 
-    print(caption_input[0])
-    print(caption_target[0])
-    print("-------")
-    print(caption_input[1])
-    print(caption_target[1])
-
     print(img_name)
     plt.imshow(img[0].permute(1, 2, 0))
     plt.show()
+    print(caption_input)
+    print(caption_target)
