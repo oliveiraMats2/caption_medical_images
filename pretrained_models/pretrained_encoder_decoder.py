@@ -1,5 +1,6 @@
-from transformers import ConvNextModel, ResNetModel, T5ForConditionalGeneration
-import torch 
+from transformers import ConvNextModel, ResNetModel, T5ForConditionalGeneration, T5Tokenizer
+import torch
+from torch import nn
 
 def get_n_params(model):
     pp=0
@@ -12,10 +13,14 @@ def get_n_params(model):
 
 
 class ConvNext2T5Model(nn.Module):
-    def __init__(self, pretrained_encoder="convnext_tiny"):
+    def __init__(self, pretrained_encoder="convnext_tiny", max_phrase_length=256, min_phrase_length=32):
         super().__init__()
+
+        self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        self.max_phrase_length = max_phrase_length
+        self.min_phrase_length = min_phrase_length
+
         self.decoder = T5ForConditionalGeneration.from_pretrained("t5-small")
-        print(get_n_params(self.decoder))
         #self.decoder.lm_head = nn.Identity()
         if pretrained_encoder is "convnext_tiny":
             self.encoder = ConvNextModel.from_pretrained("facebook/convnext-tiny-224")
@@ -29,7 +34,7 @@ class ConvNext2T5Model(nn.Module):
                                          out_channels=self.decoder.config.d_model,
                                          kernel_size=1,
                                          stride=1,
-                                         padding=1)
+                                         padding=0)
         
     def n_params(self):
         encoder_params = get_n_params(self.encoder)
@@ -44,25 +49,25 @@ class ConvNext2T5Model(nn.Module):
                 """
                 )
         
-    
     def forward(self, *args):
         out = args[0]
 
-        #print(out.shape)
         out = self.encoder.forward(out, return_dict = False)[0]
-        #print(out.shape)
         out = self.connect_enc_dec(out)
-        #print(out.shape)
-        out = out.permute(0, 2, 3, 1).reshape(-1, 81, 512)
-        #print(out.shape)
+        out = out.permute(0, 2, 3, 1).reshape(-1, 49, 512)
 
         if len(args)>1:
             labels = args[1]
-            out = self.decoder(inputs_embeds=out, labels=labels)
+            out = self.decoder(inputs_embeds=out, labels=labels, return_dict=True)
         else:
-            out = self.decoder.generate(inputs_embeds=out)
-        #print(out[0])
+            out = self.decoder.generate(inputs_embeds=out,
+                                    num_beams=4,
+                                    no_repeat_ngram_size=2,
+                                    min_length=self.min_phrase_length,
+                                    max_length=self.max_phrase_length,
+                                    early_stopping=True)
         return out
+
 
 if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
