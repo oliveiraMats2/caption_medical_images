@@ -1,6 +1,9 @@
 from transformers import ConvNextModel, ResNetModel, T5ForConditionalGeneration, T5Tokenizer
 import torch
 from torch import nn
+from tqdm import tqdm
+
+
 
 def get_n_params(model):
     pp=0
@@ -11,10 +14,6 @@ def get_n_params(model):
         pp += nn
     return pp
 
-
-from transformers import BertConfig, EncoderDecoderConfig, EncoderDecoderModel, BertTokenizer
-from transformers import ConvNextModel, ConvNextConfig, ConvNextFeatureExtractor
-from transformers import AutoFeatureExtractor, ResNetModel
 
 
 class ConvNext2T5Model(nn.Module):
