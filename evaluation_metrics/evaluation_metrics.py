@@ -1,4 +1,5 @@
 from cgi import test
+from os import rename
 import sys, argparse, string
 import csv, io
 from matplotlib.pyplot import text
@@ -48,63 +49,66 @@ def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_
     for image_key in tqdm(candidate_pairs, total=len(candidate_pairs)):
 
         # Get candidate and GT caption
-        candidate_caption = candidate_pairs[image_key]
-        gt_caption = gt_pairs[image_key]
-
-        # Optional - Go to lowercase
-        if not case_sensitive:
-            candidate_caption = candidate_caption.lower()
-            gt_caption = gt_caption.lower()
-
-        # Split caption into individual words (remove punctuation)
-        candidate_words = nltk.tokenize.word_tokenize(candidate_caption.translate(translator))
-        gt_words = nltk.tokenize.word_tokenize(gt_caption.translate(translator))
-
-        # Corpus stats
-        total_words += len(gt_words)
-        gt_sentences = nltk.tokenize.sent_tokenize(gt_caption)
-
-        # Optional - Remove stopwords
-        if remove_stopwords:
-            candidate_words = [word for word in candidate_words if word.lower() not in stops]
-            gt_words = [word for word in gt_words if word.lower() not in stops]
-
-        # Optional - Apply stemming
-        if stemming:
-            candidate_words = [stemmer.stem(word) for word in candidate_words]
-            gt_words = [stemmer.stem(word) for word in gt_words]
-
-        # Calculate BLEU score for the current caption
         try:
-            # If both the GT and candidate are empty, assign a score of 1 for this caption
-            if len(gt_words) == 0 and len(candidate_words) == 0:
-                bleu_score = 1
-            # Calculate the BLEU score
+            candidate_caption = candidate_pairs[image_key]
+            gt_caption = gt_pairs[image_key]
+
+            # Optional - Go to lowercase
+            if not case_sensitive:
+                candidate_caption = candidate_caption.lower()
+                gt_caption = gt_caption.lower()
+
+            # Split caption into individual words (remove punctuation)
+            candidate_words = nltk.tokenize.word_tokenize(candidate_caption.translate(translator))
+            gt_words = nltk.tokenize.word_tokenize(gt_caption.translate(translator))
+
+            # Corpus stats
+            total_words += len(gt_words)
+            gt_sentences = nltk.tokenize.sent_tokenize(gt_caption)
+
+            # Optional - Remove stopwords
+            if remove_stopwords:
+                candidate_words = [word for word in candidate_words if word.lower() not in stops]
+                gt_words = [word for word in gt_words if word.lower() not in stops]
+
+            # Optional - Apply stemming
+            if stemming:
+                candidate_words = [stemmer.stem(word) for word in candidate_words]
+                gt_words = [stemmer.stem(word) for word in gt_words]
+
+            # Calculate BLEU score for the current caption
+            try:
+                # If both the GT and candidate are empty, assign a score of 1 for this caption
+                if len(gt_words) == 0 and len(candidate_words) == 0:
+                    bleu_score = 1
+                # Calculate the BLEU score
+                else:
+                    bleu_score = nltk.translate.bleu_score.sentence_bleu([gt_words], candidate_words,
+                                                                        smoothing_function=SmoothingFunction().method0)
+            # Handle problematic cases where BLEU score calculation is impossible
+            except ZeroDivisionError:
+                print("Problem with zero division")
+                # print('Problem with ', gt_words, candidate_words)
+
+            # Increase calculated score
+            current_score += bleu_score
+            nb_words = str(len(gt_words))
+            if nb_words not in words_distrib:
+                words_distrib[nb_words] = 1
             else:
-                bleu_score = nltk.translate.bleu_score.sentence_bleu([gt_words], candidate_words,
-                                                                     smoothing_function=SmoothingFunction().method0)
-        # Handle problematic cases where BLEU score calculation is impossible
-        except ZeroDivisionError:
-            print("Problem with zero division")
-            # print('Problem with ', gt_words, candidate_words)
+                words_distrib[nb_words] += 1
 
-        # Increase calculated score
-        current_score += bleu_score
-        nb_words = str(len(gt_words))
-        if nb_words not in words_distrib:
-            words_distrib[nb_words] = 1
-        else:
-            words_distrib[nb_words] += 1
+            # Corpus stats
+            if len(gt_words) > max_words:
+                max_words = len(gt_words)
 
-        # Corpus stats
-        if len(gt_words) > max_words:
-            max_words = len(gt_words)
+            if len(gt_words) < min_words:
+                min_words = len(gt_words)
 
-        if len(gt_words) < min_words:
-            min_words = len(gt_words)
-
-        if len(gt_sentences) > max_sent:
-            max_sent = len(gt_sentences)
+            if len(gt_sentences) > max_sent:
+                max_sent = len(gt_sentences)
+        except:
+            ...
 
     results_dict = {
         "min_words": min_words,
@@ -156,29 +160,48 @@ class MetricsEvaluator():
             file_path = roco_path + f"/data/{mode}/radiology/captions.txt"
             self.df_reference = pd.read_csv(file_path, sep="\t", header=None)
             self.df_reference.to_csv(text_buffer, sep="\t", index=False)
+
+    
+        rename_dict={0:"img_name", 1:"phrase_target"}
+        self.df_reference.rename(columns=rename_dict, inplace=True)
         self.reference_bin = text_buffer.getvalue()
 
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
 
-    def evaluate_bleu(self, df_candidate: pd.DataFrame, remove_stopwords: bool = False, stemming: bool = False,
+    def evaluate_bleu(self, evaluation_dict:dict, remove_stopwords: bool = False, stemming: bool = False,
                       case_sensitive: bool = False):
         """
         Calcula o score BLEU e retorna todas as informacoes obtidas num dicionario.
         Inputs: 
-            df_candidate: DataFrame -> Tabela contendo as predicoes a serem avaliadas. Vale notar que ela precisa estar no mesmo formato tabela captions.txt, contendo as mesmas keys referenciando os nomes das imagens.
+            evaluation_dict: dict -> Dicionário contendo as predicoes a serem avaliadas. Vale notar que ela precisa estar no mesmo formato tabela captions.txt, contendo as mesmas keys referenciando os nomes das imagens.
             remove_stopwords: bool -> Define se haverá remocao de stopwords na avaliacao.
             stemming: bool -> Define se haverá stemming na avaliacao.
             case_sensitive: bool -> Define se a avaliacao diferenciará letras maiúsculas de minúsculas.
         """
+
+        df_evaluation = pd.DataFrame.from_dict(evaluation_dict, orient='index')
+        df_evaluation.reset_index(inplace=True)
+        rename_dict={"index":"img_name", 0:"phrase_prediction"}
+        df_evaluation.rename(columns=rename_dict, inplace=True)
+
+
+        df_merge = pd.merge(self.df_reference, df_evaluation, how="inner", on=["img_name"])
+        df_reference_filtered = df_merge[["img_name", "phrase_target"]]
+        df_evaluation_filtered = df_merge[["img_name", "phrase_prediction"]]
+
+
         text_buffer = io.StringIO()
-        df_candidate.to_csv(text_buffer, sep="\t", index=False)
-        candidate_bin = text_buffer.getvalue()
-        evaluation_dict = bleu_evaluator(self.reference_bin, candidate_bin, remove_stopwords=remove_stopwords,
+        df_reference_filtered.to_csv(text_buffer, sep="\t", index=False, header=None)
+        reference_bin = text_buffer.getvalue()
+        text_buffer.flush()
+        df_evaluation_filtered.to_csv(text_buffer, sep="\t", index=False, header=None)
+        evaluation_bin = text_buffer.getvalue()
+        evaluation_dict = bleu_evaluator(reference_bin, evaluation_bin, remove_stopwords=remove_stopwords,
                                          stemming=stemming, case_sensitive=case_sensitive)
         return evaluation_dict
 
-    def evaluate_rouge(self, df_candidate: pd.DataFrame):
+    def evaluate_rouge(self, evaluation_dict: dict):
         """
         Calcula o score ROUGE e retorna o fmeasure de unigramas.
 
@@ -196,7 +219,7 @@ class MetricsEvaluator():
         A execução desta métrica é lenta por conta da lematização.
 
         Inputs:
-            df_candidate: DataFrame -> Tabela contendo as predicoes a serem avaliadas. Vale notar que ela precisa estar no mesmo formato tabela captions.txt, contendo as mesmas keys referenciando os nomes das imagens.
+            evaluation_dict: dict -> Dicionário contendo as predicoes a serem avaliadas. Vale notar que ela precisa estar no mesmo formato tabela captions.txt, contendo as mesmas keys referenciando os nomes das imagens.
         Returns:
             f1_final_score: float -> Score ROUGE final resultado da média de todos os scores de cada linha da tabela de entrada.
         """
@@ -206,9 +229,17 @@ class MetricsEvaluator():
         # Pré processamento para fazer o merge das tabelas de entrada, de modo termos as frases candidatas e de referencia na mesma linha.
         stops = set(stopwords.words("english"))
         scorer = rouge_scorer.RougeScorer(['rouge1'], use_stemmer=True)
-        df_merge = pd.merge(self.df_reference, df_candidate, how="inner", on=[0])
-        merge_rename = {0: "IMG_NAME", "1_x": "REFERENCE", "1_y": "CANDIDATE"}
-        df_merge.rename(columns=merge_rename, inplace=True)
+
+
+
+        df_candidate = pd.DataFrame.from_dict(evaluation_dict, orient='index')
+        df_candidate.reset_index(inplace=True)
+        rename_dict={"index":"img_name", 0:"phrase_prediction"}
+        df_candidate.rename(columns=rename_dict, inplace=True)
+
+
+        
+        df_merge = pd.merge(self.df_reference, df_candidate, how="inner", on=["img_name"])
 
         load_model = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 
@@ -216,8 +247,8 @@ class MetricsEvaluator():
         for index, row in tqdm(df_merge.iterrows(), total=df_merge.shape[0]):
             try:
                 # Converte todas as letras para minúsculo e remove a pontuação.
-                target = row["REFERENCE"].lower()
-                prediction = row["CANDIDATE"].lower()
+                target = row["phrase_target"].lower()
+                prediction = row["phrase_prediction"].lower()
                 translator = str.maketrans('', '', string.punctuation)
 
                 # Remove stopwords
@@ -250,15 +281,31 @@ class MetricsEvaluator():
 if __name__ == '__main__':
     # Exemplo de utilizacao da classe BleuEvaluator.
     # Neste caso o df_evaluation é o mesmo que o arquivo de referencia apenas para fins de teste. Em um caso real, este dataframe deveria ser construído a partir da predicao da rede neural.
-    path_file = "./captions.txt"
-    df_evaluation = pd.read_csv(path_file, sep="\t", header=None)
-    text_buffer = io.StringIO()
-    df_evaluation.to_csv(text_buffer, sep="\t", index=False)
-    text_buffer_content = text_buffer.getvalue()
 
-    roco_path = "./roco-dataset"
+    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset"
+    evaluation_dict = {'ROCO_03160': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_06092': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_09308': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_13014': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_18575': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_21398': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_23923': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_26482': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_30572': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_31053': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_49800': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_53445': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_56532': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_60736': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_62950': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_72035': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_74981': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_75079': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_75557': 'Chest X-ray showing bilateral pleural effusions.',
+                        'ROCO_80302': 'Chest X-ray showing bilateral pleural effusions.'}
+                        
     evaluator = MetricsEvaluator(roco_path=roco_path, mode="test")
-    bleu = evaluator.evaluate_bleu(df_evaluation, case_sensitive=True, stemming=True, remove_stopwords=True)
+    bleu = evaluator.evaluate_bleu(evaluation_dict, case_sensitive=True, stemming=True, remove_stopwords=True)
     print(bleu)
-    rouge = evaluator.evaluate_rouge(df_evaluation)
+    rouge = evaluator.evaluate_rouge(evaluation_dict)
     print(rouge)
