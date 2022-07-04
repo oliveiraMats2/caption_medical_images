@@ -17,6 +17,9 @@ from sklearn.metrics import f1_score
 
 import spacy
 
+import datasets
+
+
 
 def bleu_evaluator(file_1, file_2, remove_stopwords=False, stemming=False, case_sensitive=False):
     # Hide warnings
@@ -169,6 +172,9 @@ class MetricsEvaluator():
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
 
+        self.meteor = datasets.load_metric('meteor')
+
+
     def evaluate_bleu(self, evaluation_dict:dict, remove_stopwords: bool = False, stemming: bool = False,
                       case_sensitive: bool = False):
         """
@@ -277,6 +283,30 @@ class MetricsEvaluator():
         f1_final_socore = sum(f1_scores_list) / len(f1_scores_list)
         return f1_final_socore
 
+    def evaluate_meteor(self, evaluation_dict: dict):
+        """
+        Cálculo do meteor recebendo um dicionário com diversas predicoes e nome de imagens como chave
+        """
+        df_candidate = pd.DataFrame.from_dict(evaluation_dict, orient='index')
+        df_candidate.reset_index(inplace=True)
+        rename_dict={"index":"img_name", 0:"phrase_prediction"}
+        df_candidate.rename(columns=rename_dict, inplace=True)
+
+        df_merge = pd.merge(self.df_reference, df_candidate, how="inner", on=["img_name"])
+        self.meteor.add_batch(predictions=df_merge["phrase_prediction"].values, 
+                                references=df_merge["phrase_target"].values)
+        meteor_score = self.meteor.compute()["meteor"]
+        return meteor_score
+
+    def evaluate_meteor_fast(self, evaluation_phrase:str, img_name:str):
+        """
+        Cálculo de meteor para apenas uma frase com intuito de monitorar todos os passos de treinamento.
+        """
+        reference_phrase = self.df_reference.loc[self.df_reference["img_name"] == img_name]["phrase_target"].values
+        self.meteor.add(reference=reference_phrase, prediction=evaluation_phrase)
+        meteor_score = self.meteor.compute()["meteor"]
+        return meteor_score
+
 
 if __name__ == '__main__':
     # Exemplo de utilizacao da classe BleuEvaluator.
@@ -309,3 +339,7 @@ if __name__ == '__main__':
     print(bleu)
     rouge = evaluator.evaluate_rouge(evaluation_dict)
     print(rouge)
+    meteor = evaluator.evaluate_meteor(evaluation_dict)
+    print(meteor)
+    meteor = evaluator.evaluate_meteor_fast('Chest X-ray showing bilateral pleural effusions.', 'ROCO_03160')
+    print(meteor)
