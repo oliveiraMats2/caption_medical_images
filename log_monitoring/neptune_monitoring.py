@@ -44,7 +44,7 @@ class NeptuneMonitoring:
         self.run["config/criterion"] = self.criterion_name
         self.run["config/optimizer"] = self.optimizer_name
 
-    def log_metrics(self, step: int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None, meteor=None):
+    def log_metrics(self, step: int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None, meteor=None, valid_mode="common"):
         """
         Grava os logs de métricas 
         Inputs:
@@ -59,20 +59,20 @@ class NeptuneMonitoring:
             raise ("Please, provide a valid mode name (train, validation or test)")
 
         if bleu is not None:
-            self.run[ mode + "/metrics/bleu/bleu_score"].log(bleu)
-            self.run[ mode + "/metrics/bleu/step"].log(step)
+            self.run[mode + "/metrics/" + valid_mode + "/bleu/bleu_score"].log(bleu)
+            self.run[mode + "/metrics/" + valid_mode + "/bleu/step"].log(step)
         if rouge is not None:
-            self.run[mode + "/metrics/rouge/rouge_score"].log(rouge)
-            self.run[mode + "/metrics/rouge/step"].log(step)
+            self.run[mode + "/metrics/" + valid_mode + "/rouge/rouge_score"].log(rouge)
+            self.run[mode + "/metrics/" + valid_mode + "/rouge/step"].log(step)
         if perplexity is not None:
-            self.run[ mode + "/metrics/perplexity/perplexity_score"].log(perplexity)
-            self.run[ mode + "/metrics/perplexity/step"].log(step)
+            self.run[mode + "/metrics/" + valid_mode + "/perplexity/perplexity_score"].log(perplexity)
+            self.run[mode + "/metrics/" + valid_mode + "/perplexity/step"].log(step)
         if loss is not None:
-            self.run[ mode + "/metrics/loss/loss_score"].log(loss)
-            self.run[mode + "/metrics/loss/step"].log(step)
+            self.run[mode + "/metrics/" + valid_mode + "/loss/loss_score"].log(loss)
+            self.run[mode + "/metrics/" + valid_mode + "/loss/step"].log(step)
         if meteor is not None:
-            self.run[ mode + "/metrics/meteor/meteor_score"].log(meteor)
-            self.run[mode + "/metrics/meteor/step"].log(step)
+            self.run[mode + "/metrics/" + valid_mode + "/meteor/meteor_score"].log(meteor)
+            self.run[mode + "/metrics/" + valid_mode + "/meteor/step"].log(step)
 
 
     def stop(self):
