@@ -59,14 +59,17 @@ class NeptuneMonitoring:
             raise ("Please, provide a valid mode name (train, validation or test)")
 
         if bleu is not None:
-            self.run[ mode + "/batch/bleu"].log(bleu)
+            self.run[ mode + "/metrics/bleu/bleu_score"].log(bleu)
+            self.run[ mode + "/metrics/bleu/step"].log(step)
         if rouge is not None:
-            self.run[mode + "/batch/rouge"].log(rouge)
+            self.run[mode + "/metrics/rouge/rouge_score"].log(rouge)
+            self.run[mode + "/metrics/rouge/step"].log(step)
         if perplexity is not None:
-            self.run[ mode + "/batch/perplexity"].log(perplexity)
+            self.run[ mode + "/metrics/perplexity/perplexity_score"].log(perplexity)
+            self.run[ mode + "/metrics/perplexity/step"].log(step)
         if loss is not None:
-            self.run[ mode + "/batch/loss"].log(loss)
-        self.run[mode + "/batch/step"].log(step)
+            self.run[ mode + "/metrics/loss/loss_score"].log(loss)
+            self.run[mode + "/metrics/loss/step"].log(step)
 
     def stop(self):
         print("Stopping Neptune monitoring...")
@@ -80,13 +83,13 @@ if __name__ == "__main__":
         "model_filename": "basemodel",
         "device": "cpu",
     }
-    NEPTUNE_API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Y2ExODNjZi1lMWVjLTQyMmItODgzMy1iY2NiN2NkMDAwODQifQ=="
+    NEPTUNE_API_TOKEN ="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiNjY1ZjcyNi0wMGMwLTQ1MjUtODNkNi03MDhiZTlhMjE3M2EifQ=="
 
     model = "test_model"
     criterion = "Cross Entropy Loss"
     optimizer = "Adam"
 
-    project = "oliveira1/captionMedicalImage"
+    project = "p175857/IA025-Neptune-Test"
     neptune_monitoring = NeptuneMonitoring(
         API_TOKEN=NEPTUNE_API_TOKEN,
         project_name=project,
@@ -94,5 +97,10 @@ if __name__ == "__main__":
         model=model,
         criterion=criterion,
         optimizer=optimizer)
+    
     neptune_monitoring.start()
+    neptune_monitoring.log_metrics(mode="train", bleu=12, step=0)
+    neptune_monitoring.log_metrics(mode="validation", bleu=13, step=0)
+    neptune_monitoring.log_metrics(mode="train", bleu=10, step=1)
+    neptune_monitoring.log_metrics(mode="validation", bleu=9, step=1)
     neptune_monitoring.stop()
