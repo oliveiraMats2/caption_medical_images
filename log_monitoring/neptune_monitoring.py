@@ -44,7 +44,7 @@ class NeptuneMonitoring:
         self.run["config/criterion"] = self.criterion_name
         self.run["config/optimizer"] = self.optimizer_name
 
-    def log_metrics(self, step: int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None):
+    def log_metrics(self, step: int, mode=None, bleu=None, rouge=None, perplexity=None, loss=None, meteor=None):
         """
         Grava os logs de métricas 
         Inputs:
@@ -70,6 +70,10 @@ class NeptuneMonitoring:
         if loss is not None:
             self.run[ mode + "/metrics/loss/loss_score"].log(loss)
             self.run[mode + "/metrics/loss/step"].log(step)
+        if meteor is not None:
+            self.run[ mode + "/metrics/meteor/meteor_score"].log(meteor)
+            self.run[mode + "/metrics/meteor/step"].log(step)
+
 
     def stop(self):
         print("Stopping Neptune monitoring...")
