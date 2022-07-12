@@ -1,4 +1,4 @@
-from transformers import ConvNextModel, ResNetModel, T5ForConditionalGeneration, T5Tokenizer
+from transformers import ConvNextModel, ResNetModel, T5ForConditionalGeneration, T5Tokenizer, ConvNextConfig
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -24,8 +24,14 @@ class ConvNext2T5Model(nn.Module):
         self.max_phrase_length = max_phrase_length
         self.min_phrase_length = min_phrase_length
 
+
+
         if pretrained_encoder == "convnext-tiny":
             self.encoder = ConvNextModel.from_pretrained("facebook/convnext-tiny-224")
+            in_channels=768
+        elif pretrained_encoder == "convnext-tiny-raw":
+            configuration = ConvNextConfig(is_encoder_decoder=False)
+            self.encoder = ConvNextModel(configuration)
             in_channels=768
         elif pretrained_encoder == "convnext-base":
             self.encoder = ConvNextModel.from_pretrained("facebook/convnext-base-224")
@@ -44,10 +50,6 @@ class ConvNext2T5Model(nn.Module):
             self.decoder = T5ForConditionalGeneration.from_pretrained("t5-base")
         elif pretrained_decoder == "t5-large":
             self.decoder = T5ForConditionalGeneration.from_pretrained("t5-large")
-
-        print(in_channels)
-
-
 
         self.connect_enc_dec = nn.Conv2d(in_channels=in_channels, 
                                          out_channels=self.decoder.config.d_model,
@@ -78,6 +80,7 @@ class ConvNext2T5Model(nn.Module):
         if len(args)>1:
             labels = args[1]
             out = self.decoder(inputs_embeds=out, labels=labels, return_dict=True)
+
         else:
             out = self.decoder.generate(inputs_embeds=out,
                                     num_beams=4,
@@ -90,8 +93,59 @@ class ConvNext2T5Model(nn.Module):
 
 
 if __name__ == "__main__":
+
+    from torchsummary import summary
+
+    def translate_encoded_ids(encoded_ids_list, tokenizer):
+        phrases = []
+        for encoded_ids in encoded_ids_list:
+            decoded_ids = tokenizer.decode(encoded_ids, skip_special_tokens=True)
+            phrases.append(decoded_ids)
+        return phrases
+
+    class ConvNextDebugger(nn.Module):
+        def __init__(self, model):
+            super().__init__()
+            self.model = model 
+        
+        def forward(self, input):
+            out = self.model.forward(input, return_dict=False)
+            out = out[0]
+            return out 
+        
+        def __call__(self, input):
+            out = self.forward(input)
+            return out 
+    
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(pretrained_encoder="convnext-tiny", tokenizer=tokenizer)
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny-raw")
     model = model.to(device)
     model.n_params()
+    input = torch.rand(size=(1,3,224,224))
+
+    print(input.shape)
+    #out = model(input)
+    #print(out)
+    #translated_out = translate_encoded_ids(out, tokenizer)
+    #print(translated_out)
+
+    import os
+    print(os.getcwd())
+    print(os.listdir())
+    import sys
+    # insert at 1, 0 is the script path (or '' in REPL)
+    sys.path.insert(1, "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images")
+    from data_folder.medical_datasets import RocoDataset
+    from torch.utils.data import Dataset, DataLoader
+
+    roco_path = "/Users/pdcos/Documents/Mestrado/IA025/Projeto_Final/Code/caption_medical_images/dataset_structure/roco-dataset"
+    valid_dataset = RocoDataset(roco_path=roco_path, mode="validation", caption_max_length=64, tokenizer=tokenizer)
+    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, drop_last=True)
+    img, cap_in, cap_target, keywords, img_name = next(iter(valid_loader))
+    out = model(img)
+    print(out)
+    #model_debug = ConvNextDebugger(model)
+    #summary(model, (3,224,224))
+
