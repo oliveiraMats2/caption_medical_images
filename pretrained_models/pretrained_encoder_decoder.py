@@ -23,8 +23,15 @@ class ConvNext2T5Model(nn.Module):
         self.tokenizer = tokenizer
         self.max_phrase_length = max_phrase_length
         self.min_phrase_length = min_phrase_length
+        self.conv_only = False
 
 
+        if pretrained_decoder == "t5-small":
+            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-small")
+        elif pretrained_decoder == "t5-base":
+            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-base")
+        elif pretrained_decoder == "t5-large":
+            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-large")
 
         if pretrained_encoder == "convnext-tiny":
             self.encoder = ConvNextModel.from_pretrained("facebook/convnext-tiny-224")
@@ -42,25 +49,30 @@ class ConvNext2T5Model(nn.Module):
         elif pretrained_encoder == "resnet18":
             self.encoder = ResNetModel.from_pretrained("microsoft/resnet-18")
             in_channels = 512
+        elif pretrained_encoder == "conv":
 
+            self.conv_only = True
+            self.encoder = nn.Conv2d(in_channels=3, 
+                                out_channels=self.decoder.config.d_model,
+                                kernel_size=135,
+                                stride=10,
+                                padding=0)
         
-        if pretrained_decoder == "t5-small":
-            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-small")
-        elif pretrained_decoder == "t5-base":
-            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-base")
-        elif pretrained_decoder == "t5-large":
-            self.decoder = T5ForConditionalGeneration.from_pretrained("t5-large")
-
-        self.connect_enc_dec = nn.Conv2d(in_channels=in_channels, 
-                                         out_channels=self.decoder.config.d_model,
-                                         kernel_size=1,
-                                         stride=1,
-                                         padding=1)
+        
+        if self.conv_only == False:
+            self.connect_enc_dec = nn.Conv2d(in_channels=in_channels, 
+                                            out_channels=self.decoder.config.d_model,
+                                            kernel_size=1,
+                                            stride=1,
+                                            padding=1)
         
     def n_params(self):
         encoder_params = get_n_params(self.encoder)
         decoder_params = get_n_params(self.decoder)
-        connector_params = get_n_params(self.connect_enc_dec)
+        if self.conv_only:
+            connector_params = 0
+        else:
+            connector_params = get_n_params(self.connect_enc_dec)
         total_params = get_n_params(self)
         print(f"""
                 Encoder params: {encoder_params}
@@ -72,9 +84,11 @@ class ConvNext2T5Model(nn.Module):
         
     def forward(self, *args):
         out = args[0]
-
-        out = self.encoder.forward(out, return_dict = False)[0]
-        out = self.connect_enc_dec(out)
+        if self.conv_only:
+            out = self.encoder(out)
+        else:
+            out = self.encoder.forward(out, return_dict = False)[0]
+            out = self.connect_enc_dec(out)
         out = out.permute(0, 2, 3, 1).reshape(-1, 81, self.decoder.config.d_model)
 
         if len(args)>1:
@@ -120,7 +134,7 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny-raw")
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny")
     model = model.to(device)
     model.n_params()
     input = torch.rand(size=(1,3,224,224))
