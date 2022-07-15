@@ -49,6 +49,9 @@ class ConvNext2T5Model(nn.Module):
         elif pretrained_encoder == "resnet18":
             self.encoder = ResNetModel.from_pretrained("microsoft/resnet-18")
             in_channels = 512
+        elif pretrained_encoder == "convnext-xlarge":
+            self.encoder = ResNetModel.from_pretrained("facebook/convnext-xlarge-224-22k-1k")
+            in_channels = 2048
         elif pretrained_encoder == "conv":
 
             self.conv_only = True
@@ -134,7 +137,7 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny")
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-xlarge", pretrained_decoder="t5-base")
     model = model.to(device)
     model.n_params()
     input = torch.rand(size=(1,3,224,224))
