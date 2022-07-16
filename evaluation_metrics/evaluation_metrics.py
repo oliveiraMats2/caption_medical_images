@@ -13,7 +13,6 @@ from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 
 from rouge_score import rouge_scorer
-from sklearn.metrics import f1_score
 
 import spacy
 
