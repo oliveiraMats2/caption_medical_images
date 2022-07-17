@@ -24,21 +24,21 @@ lr = 3e-5
 load = False
 save_best_model = True
 save_checkpoint = True
-save_best_model_path = f'Treinamentos/{encoder_name}_{decoder_name}_BestModel.pt'
-save_checkpoint_path = f'Treinamentos/{encoder_name}_{decoder_name}_Checkpoint.pt'
-load_path = f'Treinamentos/{encoder_name}_{decoder_name}_Checkpoint.pt'
+save_best_model_path = f'Treinamentos/{encoder_name}_{decoder_name}_BestModel_augmentation.pt'
+save_checkpoint_path = f'Treinamentos/{encoder_name}_{decoder_name}_Checkpoint_augmentation.pt'
+load_path = f'Treinamentos/{encoder_name}_{decoder_name}_Checkpoint_augmentation.pt'
 
 train_dataset_percentage = 1
-batch_size = 128
-eval_every_steps = 10
+batch_size = 45
+eval_every_steps = 50
 refined_eval_every_steps = 50
-common_validation_batch = batch_size * 60
+common_validation_batch = batch_size * 21
 refined_validation_batch = batch_size * 10
 shuffle_train = True
 shuffle_valid = False
 
 use_neptune_monitoring = True
-NEPTUNE_API_TOKEN = "yJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Y2ExODNjZi1lMWVjLTQyMmItODgzMy1iY2NiN2NkMDAwODQifQ=="
+NEPTUNE_API_TOKEN = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Y2ExODNjZi1lMWVjLTQyMmItODgzMy1iY2NiN2NkMDAwODQifQ=="
 neptune_project_name = "oliveira1/captionMedicalImage"
 
 
@@ -100,7 +100,7 @@ def train_step(input, caption_input, model):
     loss = logits[0]
     loss.backward()
     scheduler.step()
-
+    optimizer.step()
     return loss.item()
 
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
                                                             torchvision.transforms.RandomVerticalFlip(0.5),
                                                             torchvision.transforms.Resize((224, 224))])
 
-    train_dataset = RocoDataset(roco_path=roco_path, mode="train", transform=transformation_images,
+    train_dataset = RocoDataset(roco_path=roco_path, mode="train",transform = transformation_images,
                                 caption_max_length=64, tokenizer=tokenizer)
     valid_dataset = RocoDataset(roco_path=roco_path, mode="validation", caption_max_length=64, tokenizer=tokenizer)
 
@@ -217,13 +217,12 @@ if __name__ == "__main__":
 
         neptune_monitoring.start()
 
-    iter_loader = iter(train_loader)
     valid_loss = 0
     epochs = 50
 
     for j in range(epochs):
         print(f"inicializing epoch:{j}")
-
+        iter_loader = iter(train_loader)
         for i in tqdm(range(len(train_loader))):
             try:
                 img, caption_input, caption_target, _, _ = next(iter_loader)

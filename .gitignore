@@ -8,6 +8,8 @@ models/transformer_decoder/.neptune/
 
 notebooks/VIT_transformer_debug.ipynb
 
+roco-dataset.zip
+
 .idea/
 
 ../data/test/radiology/images/
