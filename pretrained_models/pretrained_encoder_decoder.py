@@ -17,13 +17,35 @@ def get_n_params(model):
 
 
 class ConvNext2T5Model(nn.Module):
-    def __init__(self, tokenizer=False, pretrained_encoder="convnext-tiny", pretrained_decoder="t5-small", max_phrase_length=256, min_phrase_length=5):
+    def __init__(self, 
+                 tokenizer=False, 
+                 pretrained_encoder="convnext-tiny", 
+                 pretrained_decoder="t5-small", 
+                 max_phrase_length=1024, 
+                 min_phrase_length=5, 
+                 num_beams=4,
+                 no_repeat_ngram_size=2, 
+                 do_sample=True, 
+                 temperature=1,
+                 top_k=50,
+                 top_p=1,
+                 repetition_penalty=1):
+
         super().__init__()
 
         self.tokenizer = tokenizer
         self.max_phrase_length = max_phrase_length
         self.min_phrase_length = min_phrase_length
         self.conv_only = False
+
+        self.num_beams=num_beams
+        self.no_repeat_ngram_size=no_repeat_ngram_size
+        self.do_sample=do_sample
+        self.temperature=temperature
+        self.top_k=top_k
+        self.top_p=top_p
+        self.repetiton_penalty=repetition_penalty
+
 
 
         if pretrained_decoder == "t5-small":
@@ -99,12 +121,18 @@ class ConvNext2T5Model(nn.Module):
             out = self.decoder(inputs_embeds=out, labels=labels, return_dict=True)
 
         else:
+
             out = self.decoder.generate(inputs_embeds=out,
-                                    num_beams=4,
-                                    no_repeat_ngram_size=2,
+                                    num_beams=self.num_beams,
+                                    no_repeat_ngram_size=self.no_repeat_ngram_size,
+                                    do_sample=self.do_sample,
                                     min_length=self.min_phrase_length,
                                     max_length=self.max_phrase_length,
-                                    early_stopping=True)
+                                    early_stopping=True,
+                                    temperature=self.temperature,
+                                    top_k=self.top_k,
+                                    top_p=self.top_p,
+                                    repetition_penalty=self.repetiton_penalty)
         return out
 
 
@@ -137,7 +165,7 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-xlarge", pretrained_decoder="t5-base")
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-large", pretrained_decoder="t5-base")
     model = model.to(device)
     model.n_params()
     input = torch.rand(size=(1,3,224,224))
