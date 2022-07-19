@@ -21,7 +21,7 @@ class ConvNext2T5Model(nn.Module):
                  tokenizer=False, 
                  pretrained_encoder="convnext-tiny", 
                  pretrained_decoder="t5-small", 
-                 use_connector=False,
+                 use_connector=True,
                  max_phrase_length=1024, 
                  min_phrase_length=5, 
                  num_beams=4,
@@ -121,7 +121,10 @@ class ConvNext2T5Model(nn.Module):
         if self.use_connector:
             out = out.permute(0, 2, 3, 1).reshape(-1, 81, self.decoder.config.d_model)
         else:
-            out = out.permute(0, 2, 3, 1).reshape(out.shape[0], -1, self.decoder.config.d_model)
+            print(out.shape)
+            out = out.permute(0, 2, 3, 1)
+            print(out.shape)
+            out = out.reshape(out.shape[0], -1, self.decoder.config.d_model)
       
 
         if len(args)>1:
@@ -173,7 +176,7 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny", pretrained_decoder="t5-small", use_connector=True)
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny", pretrained_decoder="t5-small", use_connector=False)
     model = model.to(device)
     model.n_params()
     input = torch.rand(size=(1,3,224,224))
@@ -197,8 +200,8 @@ if __name__ == "__main__":
     valid_dataset = RocoDataset(roco_path=roco_path, mode="validation", caption_max_length=64, tokenizer=tokenizer)
     valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=True, drop_last=True)
     img, cap_in, cap_target, keywords, img_name = next(iter(valid_loader))
-    out = model(img)
-    print(out)
+    out = model(img, cap_in)
+    print(out[0])
     #model_debug = ConvNextDebugger(model)
     #summary(model, (3,224,224))
 
