@@ -1,0 +1,13 @@
+{
+    "fileLocations": [
+        {
+            "URIs": [
+                "https://mcm-metrics-gru-dceo.s3.amazonaws.com/mcm_metrics_spreadsheet.csv"
+            ]
+        }
+    ],
+    "globalUploadSettings": {
+        "format": "CSV",
+        "delimiter": ","
+    }
+}

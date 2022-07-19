@@ -342,3 +342,4 @@ if __name__ == '__main__':
     print(meteor)
     meteor = evaluator.evaluate_meteor_fast('Chest X-ray showing bilateral pleural effusions.', 'ROCO_03160')
     print(meteor)
+
