@@ -21,6 +21,7 @@ class ConvNext2T5Model(nn.Module):
                  tokenizer=False, 
                  pretrained_encoder="convnext-tiny", 
                  pretrained_decoder="t5-small", 
+                 use_connector=False,
                  max_phrase_length=1024, 
                  min_phrase_length=5, 
                  num_beams=4,
@@ -37,6 +38,7 @@ class ConvNext2T5Model(nn.Module):
         self.max_phrase_length = max_phrase_length
         self.min_phrase_length = min_phrase_length
         self.conv_only = False
+        self.use_connector=use_connector
 
         self.num_beams=num_beams
         self.no_repeat_ngram_size=no_repeat_ngram_size
@@ -112,9 +114,15 @@ class ConvNext2T5Model(nn.Module):
         if self.conv_only:
             out = self.encoder(out)
         else:
+            ...
             out = self.encoder.forward(out, return_dict = False)[0]
-            out = self.connect_enc_dec(out)
-        out = out.permute(0, 2, 3, 1).reshape(-1, 81, self.decoder.config.d_model)
+            if self.use_connector:
+                out = self.connect_enc_dec(out)
+        if self.use_connector:
+            out = out.permute(0, 2, 3, 1).reshape(-1, 81, self.decoder.config.d_model)
+        else:
+            out = out.permute(0, 2, 3, 1).reshape(out.shape[0], -1, self.decoder.config.d_model)
+      
 
         if len(args)>1:
             labels = args[1]
@@ -165,7 +173,7 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-large", pretrained_decoder="t5-base")
+    model = ConvNext2T5Model(tokenizer=tokenizer, pretrained_encoder="convnext-tiny", pretrained_decoder="t5-small", use_connector=True)
     model = model.to(device)
     model.n_params()
     input = torch.rand(size=(1,3,224,224))
